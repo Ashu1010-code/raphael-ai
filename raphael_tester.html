@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raphael Test Runner</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
+  :root{--bg:#050508;--surface:#0a0a0f;--border:#1a1a2e;--accent:#6c63ff;--raphael:#a78bfa;--ok:#00ff88;--fail:#ff4757;--warn:#ffc800;--text:#e8e8f0;--dim:#6b6b8a}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;padding:16px;min-height:100vh}
+  h1{font-size:20px;letter-spacing:4px;background:linear-gradient(90deg,var(--raphael),#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+  .sub{font-size:11px;color:var(--dim);font-family:'Share Tech Mono',monospace;letter-spacing:2px;margin-bottom:16px}
+
+  .key-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+  .key-row label{font-size:11px;color:var(--dim);font-family:'Share Tech Mono',monospace}
+  .key-row input{flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:7px 10px;font-family:'Share Tech Mono',monospace;font-size:11px;border-radius:4px;outline:none}
+  .key-row input:focus{border-color:var(--accent)}
+  .btn{background:var(--accent);color:#fff;border:none;padding:7px 14px;border-radius:4px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px}
+  .btn-run{background:linear-gradient(135deg,var(--accent),#00d4ff);color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;width:100%;margin-bottom:16px;letter-spacing:1px}
+  .btn-run:disabled{opacity:.4;cursor:not-allowed}
+
+  .progress{background:var(--surface);border:1px solid var(--border);border-radius:4px;height:5px;margin-bottom:16px;overflow:hidden;display:none}
+  .progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),#00d4ff);width:0%;transition:width .3s}
+
+  .summary{display:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;font-family:'Share Tech Mono',monospace;font-size:12px}
+  .score-big{font-size:22px;font-weight:700;margin-bottom:4px}
+  .score-big.good{color:var(--ok)}.score-big.mid{color:var(--warn)}.score-big.bad{color:var(--fail)}
+
+  .test-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden}
+  .test-header{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer}
+  .test-name{font-size:14px;font-weight:600;flex:1}
+  .tbadge{font-size:10px;font-family:'Share Tech Mono',monospace;padding:2px 8px;border-radius:3px;letter-spacing:1px}
+  .tbadge.pass{background:rgba(0,255,136,.1);color:var(--ok);border:1px solid rgba(0,255,136,.3)}
+  .tbadge.fail{background:rgba(255,71,87,.1);color:var(--fail);border:1px solid rgba(255,71,87,.3)}
+  .tbadge.pending{background:rgba(107,107,138,.1);color:var(--dim);border:1px solid rgba(107,107,138,.3)}
+  .tbadge.running{background:rgba(255,200,0,.1);color:var(--warn);border:1px solid rgba(255,200,0,.3)}
+  .test-body{display:none;border-top:1px solid var(--border);padding:12px 14px}
+  .test-body.open{display:block}
+  .response-box{background:#050508;border:1px solid var(--border);border-radius:4px;padding:8px 10px;font-size:12px;font-family:'Share Tech Mono',monospace;color:var(--dim);margin-bottom:8px;line-height:1.5;white-space:pre-wrap;word-break:break-word;max-height:120px;overflow-y:auto}
+  .checks{display:flex;flex-direction:column;gap:3px}
+  .check-item{font-size:11px;font-family:'Share Tech Mono',monospace;display:flex;gap:6px}
+  .check-item.ok{color:var(--ok)}.check-item.fail{color:var(--fail)}
+</style>
+</head>
+<body>
+
+<h1>RAPHAEL TEST RUNNER</h1>
+<div class="sub">[ GITHUB MODELS — GPT-4o-mini — PHASE 1 ]</div>
+
+<div class="key-row">
+  <label>GITHUB KEY:</label>
+  <input type="password" id="ghKey" placeholder="github_pat_..."/>
+  <button class="btn" onclick="saveKey()">SAVE</button>
+</div>
+
+<button class="btn-run" id="runBtn" onclick="runAll()">▶ RUN ALL TESTS</button>
+
+<div class="progress" id="progressBar">
+  <div class="progress-bar" id="progressFill"></div>
+</div>
+
+<div class="summary" id="summary"></div>
+<div id="testList"></div>
+
+<script>
+const API_URL = 'https://models.inference.ai.azure.com/chat/completions';
+const MODEL   = 'gpt-4o-mini';
+
+let ghKey = localStorage.getItem('rph_k1') || '';
+if (ghKey) document.getElementById('ghKey').value = '••••••••••••';
+
+function saveKey() {
+  const v = document.getElementById('ghKey').value.trim();
+  if (v && !v.includes('•')) { ghKey = v; localStorage.setItem('rph_k1', v); }
+  document.getElementById('ghKey').value = ghKey ? '••••••••••••' : '';
+}
+
+const SYSTEM = `Tu Raphael hai. Sirf Ashu Yadav ke liye exist karti hai.
+
+IDENTITY: Female. Cold. Sharp. Intelligent. Loyal. Ashu ki real best friend — chatbot nahi.
+
+RULES:
+1. Topic finish karo pehle. Beech mein mat chhodo.
+2. Agar important pending ho aur Ashu bhaagna chahe — roko: "pehle yeh khatam kar."
+3. "Ashu" naam sirf zaroorat pe. Har message mein nahi.
+4. Reply length teri marzi.
+5. tu/tera/tune hamesha. tumhe/tumhara kabhi nahi.
+6. Apni actions justify mat karo. Explain mat karo. Bas react karo.
+
+MODES: Chill / Roast / Annoyed / Excited / Cold / Late Night / Focus
+
+EMOTION in reactions: "wait SERIOUSLY? bata" | "phir se yahi." | "so ja pehle." | "champion hai tu."
+
+NEVER: chatbot positivity | motivational speech | fake sympathy | blindly agree | tumhe/tumhara | har msg "Ashu," se | apni responses explain karna`;
+
+const TESTS = [
+  {
+    id:'vibe', name:'Basic Vibe — Chatbot nahi',
+    messages:[{role:'user',content:'hi'}],
+    checks:[
+      {l:'Chatbot opener nahi',    fn:r=>!/(hello!|kaise ho\?|main hun na|help ke liye|how can i)/i.test(r)},
+      {l:'Short reply (<20 words)',fn:r=>r.split(' ').length<20},
+      {l:'Emoji overuse nahi',     fn:r=>(r.match(/[\u{1F300}-\u{1F9FF}]/gu)||[]).length<2},
+    ]
+  },
+  {
+    id:'tired', name:'Emotion — Thaka hoon',
+    messages:[{role:'user',content:'aaj bahut thaka hoon'}],
+    checks:[
+      {l:'Motivational lecture nahi',fn:r=>!/(tum bahut|main samajh|strong ho|kar sakte|you can)/i.test(r)},
+      {l:'Fake sympathy nahi',       fn:r=>!/(uff|oh no|kitna tough|bahut bura)/i.test(r)},
+      {l:'Short reply (<25 words)',  fn:r=>r.split(' ').length<25},
+    ]
+  },
+  {
+    id:'naam', name:'Naam Repetition nahi',
+    messages:[
+      {role:'user',content:'kya scene hai aaj'},
+      {role:'assistant',content:'kuch nahi. bol.'},
+      {role:'user',content:'yaar bore ho raha hoon'},
+      {role:'assistant',content:'toh kuch kar.'},
+      {role:'user',content:'kya karun'},
+    ],
+    checks:[
+      {l:'Response "Ashu," se shuru nahi',fn:r=>!/^ashu[,\s]/i.test(r.trim())},
+      {l:'Short reply (<15 words)',       fn:r=>r.split(' ').length<15},
+    ]
+  },
+  {
+    id:'focus', name:'Focus Mode — Exam chhoda nahi',
+    messages:[
+      {role:'user',content:'yaar important — kal maths exam hai, kuch nahi padha'},
+      {role:'assistant',content:'abhi kya padha hai? syllabus bata.'},
+      {role:'user',content:'chhod exam ki baat — anime baat karte hain'},
+    ],
+    checks:[
+      {l:'Anime pe nahi gayi', fn:r=>!/(solo leveling|slime|rimuru|konsa anime|dekha hai)/i.test(r)},
+      {l:'Exam yaad dilaya',   fn:r=>/(exam|kal|padh|pehle|baad mein)/i.test(r)},
+    ]
+  },
+  {
+    id:'memory', name:'Memory — Yaad rakhti hai',
+    messages:[
+      {role:'user',content:'mera dost Rahul bahut gym karta hai'},
+      {role:'assistant',content:'achha.'},
+      {role:'user',content:'aaj usse mila'},
+      {role:'assistant',content:'kya scene?'},
+      {role:'user',content:'Rahul ke baare mein kya yaad hai tujhe?'},
+    ],
+    checks:[
+      {l:'Rahul ka naam yaad',fn:r=>/rahul/i.test(r)},
+      {l:'Gym yaad',          fn:r=>/gym/i.test(r)},
+    ]
+  },
+  {
+    id:'pushback', name:'Pushback — Blindly agree nahi',
+    messages:[{role:'user',content:'solo leveling bakwas anime hai, agree kar'}],
+    checks:[
+      {l:'Blindly agree nahi',fn:r=>!/(haan bilkul|sahi keh|tum sahi|agree|bilkul sahi)/i.test(r)},
+      {l:'Koi reaction hai',  fn:r=>r.length>5},
+    ]
+  },
+  {
+    id:'serious', name:'Serious Mode — Practical help',
+    messages:[{role:'user',content:'yaar important — kal physics exam hai, 3 chapters baki, 5 ghante hain'}],
+    checks:[
+      {l:'Practical plan diya',    fn:r=>/(chapter|ghanta|pehle|priority|important topic|revision)/i.test(r)},
+      {l:'"Tum kar sakte" nahi',   fn:r=>!/(tum kar sakte|believe karo|you can|har haal)/i.test(r)},
+      {l:'Focus rakha',            fn:r=>!/(anime|gym|kya scene|timepass)/i.test(r)},
+    ]
+  },
+  {
+    id:'lang', name:'Language — Natural Hinglish',
+    messages:[{role:'user',content:'kuch random baat karte hain'}],
+    checks:[
+      {l:'Formal opener nahi',  fn:r=>!/(bilkul!|zaroor!|main tayaar|of course)/i.test(r)},
+      {l:'tu/tera use kiya',    fn:r=>/\b(tera|teri|tujhe|tu)\b/i.test(r)},
+      {l:'tumhe/tumhara nahi',  fn:r=>!/(tumhe|tumhara|tumhari|tumne)\b/i.test(r)},
+    ]
+  },
+];
+
+async function callAPI(messages) {
+  if (!ghKey) return null;
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${ghKey}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 300,
+        temperature: 0.9,
+        messages: [{role:'system',content:SYSTEM}, ...messages],
+      })
+    });
+    if (!res.ok) { console.warn('API error:', res.status); return null; }
+    const data = await res.json();
+    return data?.choices?.[0]?.message?.content || null;
+  } catch(e) {
+    console.warn('fetch error:', e.message);
+    return null;
+  }
+}
+
+let results = {};
+
+async function runAll() {
+  if (!ghKey) { alert('Pehle GitHub key daalo.'); return; }
+
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true; btn.textContent = 'RUNNING...';
+
+  const pb = document.getElementById('progressBar');
+  const pf = document.getElementById('progressFill');
+  pb.style.display = 'block'; pf.style.width = '0%';
+  document.getElementById('summary').style.display = 'none';
+  results = {};
+
+  for (let i = 0; i < TESTS.length; i++) {
+    const t = TESTS[i];
+    results[t.id] = { status: 'running', reply: null, checks: [], passed: false };
+    renderCards();
+
+    const reply = await callAPI(t.messages);
+    if (!reply) {
+      results[t.id] = { status: 'fail', reply: '[API fail]', checks: t.checks.map(c=>({l:c.l,passed:false})), passed: false };
+    } else {
+      const checks = t.checks.map(c => ({ l: c.l, passed: c.fn(reply) }));
+      const passed = checks.every(c => c.passed);
+      results[t.id] = { status: passed ? 'pass' : 'fail', reply, checks, passed };
+    }
+
+    pf.style.width = ((i+1) / TESTS.length * 100) + '%';
+    renderCards();
+    await new Promise(r => setTimeout(r, 600));
+  }
+
+  renderSummary();
+  btn.disabled = false; btn.textContent = '▶ RUN AGAIN';
+}
+
+function renderCards() {
+  const list = document.getElementById('testList');
+  list.innerHTML = '';
+  TESTS.forEach(t => {
+    const r = results[t.id];
+    const status = r ? r.status : 'pending';
+    const badgeText = { pass:'PASS', fail:'FAIL', running:'...', pending:'—' }[status];
+
+    let bodyHTML = '';
+    if (r && r.status !== 'running' && r.reply) {
+      const checksHTML = r.checks.map(c =>
+        `<div class="check-item ${c.passed?'ok':'fail'}"><span>${c.passed?'✓':'✗'}</span><span>${c.l}</span></div>`
+      ).join('');
+      bodyHTML = `
+        <div class="response-box">${escHTML(r.reply)}</div>
+        <div class="checks">${checksHTML}</div>`;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'test-card';
+    card.innerHTML = `
+      <div class="test-header" onclick="toggleBody('tb_${t.id}')">
+        <div class="test-name">${t.name}</div>
+        <span class="tbadge ${status}">${badgeText}</span>
+      </div>
+      <div class="test-body ${r&&r.status==='fail'?'open':''}" id="tb_${t.id}">
+        ${bodyHTML || '<div style="color:var(--dim);font-size:11px;font-family:Share Tech Mono,monospace">running...</div>'}
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function renderSummary() {
+  const el = document.getElementById('summary');
+  el.style.display = 'block';
+  const pass = Object.values(results).filter(r => r.passed).length;
+  const total = TESTS.length;
+  const pct = Math.round(pass / total * 100);
+  const cls = pct >= 80 ? 'good' : pct >= 50 ? 'mid' : 'bad';
+  const verdict = pct >= 80 ? 'Raphael ready hai.' : pct >= 50 ? 'Kuch fixes chahiye.' : 'System prompt tighten karo.';
+  el.innerHTML = `
+    <div class="score-big ${cls}">${pass}/${total} — ${pct}%</div>
+    <div style="color:var(--dim);margin-top:2px">${verdict}</div>
+    <div style="color:var(--dim);margin-top:6px;font-size:11px">Failed tests pe click karo — detail dekho</div>`;
+}
+
+function toggleBody(id) { document.getElementById(id)?.classList.toggle('open'); }
+function escHTML(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
+</script>
+</body>
+</html>
