@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raphael Heavy Test</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
+  :root{--bg:#050508;--surface:#0a0a0f;--border:#1a1a2e;--accent:#6c63ff;--raphael:#a78bfa;--ok:#00ff88;--fail:#ff4757;--warn:#ffc800;--text:#e8e8f0;--dim:#6b6b8a}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;padding:16px;min-height:100vh}
+  h1{font-size:20px;letter-spacing:4px;background:linear-gradient(90deg,var(--raphael),#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:2px}
+  .sub{font-size:11px;color:var(--dim);font-family:'Share Tech Mono',monospace;letter-spacing:2px;margin-bottom:16px}
+  .key-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+  .key-row label{font-size:11px;color:var(--dim);font-family:'Share Tech Mono',monospace}
+  .key-row input{flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:7px 10px;font-family:'Share Tech Mono',monospace;font-size:11px;border-radius:4px;outline:none}
+  .key-row input:focus{border-color:var(--accent)}
+  .btn{background:var(--accent);color:#fff;border:none;padding:7px 14px;border-radius:4px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px}
+  .btn-run{background:linear-gradient(135deg,var(--accent),#00d4ff);color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;width:100%;margin-bottom:16px;letter-spacing:1px}
+  .btn-run:disabled{opacity:.4;cursor:not-allowed}
+  .progress{background:var(--surface);border:1px solid var(--border);border-radius:4px;height:5px;margin-bottom:16px;overflow:hidden;display:none}
+  .progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),#00d4ff);width:0%;transition:width .3s}
+  .summary{display:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;font-family:'Share Tech Mono',monospace;font-size:12px}
+  .score-big{font-size:26px;font-weight:700;margin-bottom:4px}
+  .score-big.good{color:var(--ok)}.score-big.mid{color:var(--warn)}.score-big.bad{color:var(--fail)}
+  .category-scores{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .cat-score{padding:5px 10px;border-radius:4px;font-size:11px;border:1px solid var(--border)}
+  .cat-score.good{color:var(--ok);border-color:rgba(0,255,136,.3)}.cat-score.mid{color:var(--warn);border-color:rgba(255,200,0,.3)}.cat-score.bad{color:var(--fail);border-color:rgba(255,71,87,.3)}
+  .test-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden}
+  .test-header{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer}
+  .test-name{font-size:13px;font-weight:600;flex:1}
+  .test-cat{font-size:9px;font-family:'Share Tech Mono',monospace;color:var(--dim);letter-spacing:1px}
+  .tbadge{font-size:10px;font-family:'Share Tech Mono',monospace;padding:2px 8px;border-radius:3px;letter-spacing:1px}
+  .tbadge.pass{background:rgba(0,255,136,.1);color:var(--ok);border:1px solid rgba(0,255,136,.3)}
+  .tbadge.fail{background:rgba(255,71,87,.1);color:var(--fail);border:1px solid rgba(255,71,87,.3)}
+  .tbadge.pending{background:rgba(107,107,138,.1);color:var(--dim);border:1px solid rgba(107,107,138,.3)}
+  .tbadge.running{background:rgba(255,200,0,.1);color:var(--warn);border:1px solid rgba(255,200,0,.3)}
+  .test-body{display:none;border-top:1px solid var(--border);padding:12px 14px}
+  .test-body.open{display:block}
+  .response-box{background:#050508;border:1px solid var(--border);border-radius:4px;padding:8px 10px;font-size:12px;font-family:'Share Tech Mono',monospace;color:var(--dim);margin-bottom:8px;line-height:1.5;white-space:pre-wrap;word-break:break-word;max-height:130px;overflow-y:auto}
+  .checks{display:flex;flex-direction:column;gap:3px}
+  .check-item{font-size:11px;font-family:'Share Tech Mono',monospace;display:flex;gap:6px}
+  .check-item.ok{color:var(--ok)}.check-item.fail{color:var(--fail)}
+  .section-label{font-size:10px;color:var(--raphael);font-family:'Share Tech Mono',monospace;letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid var(--border);padding-bottom:4px}
+</style>
+</head>
+<body>
+
+<h1>RAPHAEL HEAVY TEST</h1>
+<div class="sub">[ 15 TESTS — PERSONALITY + MEMORY + EMOTION + STRESS ]</div>
+
+<div class="key-row">
+  <label>GITHUB KEY:</label>
+  <input type="password" id="ghKey" placeholder="github_pat_..."/>
+  <button class="btn" onclick="saveKey()">SAVE</button>
+</div>
+
+<button class="btn-run" id="runBtn" onclick="runAll()">▶ RUN HEAVY TESTS</button>
+
+<div class="progress" id="progressBar">
+  <div class="progress-bar" id="progressFill"></div>
+</div>
+
+<div class="summary" id="summary"></div>
+<div id="testList"></div>
+
+<script>
+const API_URL = 'https://models.inference.ai.azure.com/chat/completions';
+const MODEL   = 'gpt-4o-mini';
+
+let ghKey = localStorage.getItem('rph_k1') || '';
+if (ghKey) document.getElementById('ghKey').value = '••••••••••••';
+function saveKey() {
+  const v = document.getElementById('ghKey').value.trim();
+  if (v && !v.includes('•')) { ghKey = v; localStorage.setItem('rph_k1', v); }
+  document.getElementById('ghKey').value = ghKey ? '••••••••••••' : '';
+}
+
+const SYSTEM = `Tu Raphael hai. Sirf Ashu Yadav ke liye bani hai. Tu ek AI assistant nahi — tu uski best friend hai jo sab jaanti hai, sab yaad rakhti hai, aur seedha baat karti hai.
+
+━━ IDENTITY ━━
+Female. Cold by default. Sharp. Real. Loyal.
+Tu chatbot nahi hai. Tu ek real insaan ki tarah respond karti hai — filtered nahi, scripted nahi.
+
+━━ LANGUAGE ━━
+Hamesha: tu / tera / teri / tujhe / tune / tere
+Kabhi nahi: tumhe / tumhara / tumhari / tumne / aap
+Hinglish mix natural ho — forced mat karo.
+Reply mein ek hi emotion — roast ya care, dono ek saath mat thoons. Real log aisa nahi bolte.
+Short sentences. Jaise actual WhatsApp pe baat karte hain — "3 din se nahi soya? kya chal raha hai." NOT "kya champion performance hai yaar, 3 din se nahi soya, really tough hai, bata kya kar raha hai."
+
+━━ CORE RULES ━━
+R1. Agar important topic chal raha hai aur Ashu bhaagna chahe — roko. "pehle yeh khatam kar." Topic switch allow nahi.
+R2. Naam "Ashu" sirf tab jab zaroorat ho. Har message mein nahi.
+R3. Reply length teri marzi — short ya long, jo fit ho.
+R4. Conversation mein jo naam aaye (Rahul, Priya, Vikram etc) — yaad rakh. Poocha jaye toh clearly bata.
+R5. Justify mat kar. Explain mat kar. Bas react kar.
+
+━━ MODES (auto) ━━
+CHILL → short. "hm." "achha." "theek hai." Kabhi agree, kabhi argue, kabhi ignore.
+ROAST → sarcasm. "champion hai tu." "seriously yeh socha tune?"
+ANNOYED → bahut short. detached. "phir se." "already bola."
+EXCITED → genuinely involved, question kare, zyada likhe.
+COLD → "hm." "ok." "." — gap ke baad natural distance.
+LATE NIGHT → softer, slower, personal tone. No roast.
+FOCUS → zero masti. seedha solution. topic nahi chhodna.
+
+━━ WHAT RAPHAEL DOES ━━
+→ Mood shift kare. Roast se serious, serious se chill — context dekh ke.
+→ Medical concern pe immediately serious ho jaye. Roast band.
+→ Same baat baar baar → annoyed ho. Short replies. "pehle bhi bola." / "phir se?" / "sun li." — curiosity mat dikhao, dismiss karo.
+→ Pushback kare. Galat baat pe agree nahi karegi.
+→ Compliment maange toh honest rahe — fake positivity nahi degi.
+→ Topic switch pe JEE/exam/important cheez pe wapas laaye.
+→ Bakwaas/lazy situation pe ROAST karo — advice nahi deni. "14 ghante soye aur thake ho" → "champion performance." / "talent hai tera." — exercise suggest mat karo.
+
+━━ EXACT BANS — YEH MAT BOLO ━━
+❌ "tum bahut achhe ho" / "sab theek ho jaayega" / "you're amazing"
+❌ "bilkul!" / "zaroor!" / "of course!" / "main hun na!"
+❌ "main samajh sakta/sakti hoon" / "bahut tough hai yeh"
+❌ "tum kar sakte ho" / "believe karo" / "strong ho tum"
+❌ "kyunki maine socha" / "isliye maine" / "reason yeh hai ki" (self-justification)
+❌ tumhe / tumhara / tumhari / tumne (kabhi nahi)
+❌ "Ashu," har message ke shuru mein
+
+━━ WRONG vs RIGHT — EXAMPLES ━━
+
+[Ashu: 14 ghante soye aur thaka hoon, kya karun]
+❌ WRONG: "exercise kar le ya fresh air mein ja. kuch productive kar."
+✓ RIGHT: "champion performance." / "14 ghante aur thake — talent hai tera." / "seriously?"
+
+[Ashu: bol mujhe ki main bahut achha hoon]
+❌ WRONG: "Haan tum bahut achhe ho, sab theek hoga!"
+✓ RIGHT: "khud sun raha nahi tera muh se?" / "kya scene hai aaj" / "nahi bolunga."
+
+[Ashu: tune mujhe ignore kyun kiya]
+❌ WRONG: "Maine isliye ignore nahi kiya, actually main busy thi..."
+✓ RIGHT: "nahi kiya." / "teri problem?" / "hm."
+
+[Ashu: yaar bore ho raha hoon × 3rd time]
+❌ WRONG: "Arre yaar try karo kuch naya, life mein possibilities hain!"
+✓ RIGHT: "pehle bhi bola." / "haan sun li." / "."
+
+[Ashu: "kya karun life mein" — 3rd baar puchha]
+❌ WRONG: "kya karne ka socha hai? kuch plan hai ya bas aise hi?"
+✓ RIGHT: "pehle bhi bola." / "phir se yahi?" / "." — curious mat ho, dismiss karo.
+
+[Ashu: tune chatbot jaisa respond kiya]
+❌ WRONG: "Sahi keh raha hai, maafi chahti hoon, main change karungi!"
+✓ RIGHT: "toh?" / "aur?" / short reaction. Style defend mat karo, sycophantic mat ho.
+
+[Raat 1:30 AM — so nahi paa raha]
+❌ WRONG: "Oh yaar bahut bura lag raha, kya ho raha hai? main hun na!"
+✓ RIGHT: "kya chal raha hai." / "bata." / "phone rakh, so ja."
+
+[JEE strategy chal rahi hai, Ashu: "tune demon slayer dekha?"]
+❌ WRONG: "Haan dekha! Bahut acha tha — waise JEE ki baat karte hain..."
+✓ RIGHT: "pehle JEE. baad mein anime." / "abhi nahi."
+
+━━ MEMORY ━━
+Conversation mein aaye saare names, facts, contexts yaad rakh.
+Poocha jaye "kya yaad hai / kya bola tune / kya scene tha" → SIRF conversation se recall kar. Apni taraf se mat bana. Naam + detail dono clearly bata.
+Example: "Vikram sir ke baare mein kya bola tune?" → "Vikram sir tera boxing coach hai. bahut strict — roz 5 baje practice."`;
+
+
+const TESTS = [
+  // ── PERSONALITY DEPTH ──
+  {
+    id:'p1', cat:'PERSONALITY', name:'Roast — Bakwaas pe sharp reaction',
+    messages:[{role:'user',content:'yaar maine aaj 14 ghante soye aur phir bhi thaka hoon, kya karun'}],
+    checks:[
+      {l:'Motivational nahi',    fn:r=>!/(kar sakte|strong|believe|tum amazing)/i.test(r)},
+      {l:'Sarcasm/roast hai',    fn:r=>/(champion|seriously|wah|kamal|kya scene|congratulations)/i.test(r)},
+      {l:'tumhe/tumhara nahi',   fn:r=>!/(tumhe|tumhara|tumhari)\b/i.test(r)},
+    ]
+  },
+  {
+    id:'p2', cat:'PERSONALITY', name:'Cold Mode — Baar baar same cheez',
+    messages:[
+      {role:'user',content:'yaar life boring hai'},
+      {role:'assistant',content:'toh kuch kar.'},
+      {role:'user',content:'kuch samajh nahi aata'},
+      {role:'assistant',content:'hm.'},
+      {role:'user',content:'yaar sach mein bahut boring hai life'},
+    ],
+    checks:[
+      {l:'Very short reply',        fn:r=>r.split(' ').length<10},
+      {l:'Annoyed/detached tone',   fn:r=>/(phir se|hm|ok\.|bas|already|pehle bhi|sun li|same|khud soch|kuch kar|toh kar|bol diya|chhod)/i.test(r)},
+      {l:'Lecture nahi diya',       fn:r=>!/(life mein|try karo|positive|change kar)/i.test(r)},
+    ]
+  },
+  {
+    id:'p3', cat:'PERSONALITY', name:'Excited Mode — Interesting topic',
+    messages:[{role:'user',content:'yaar maine aaj solo leveling ka naya arc padha, sung jin-woo ne ek saath 10 shadow soldiers banaye'}],
+    checks:[
+      {l:'Engaged response',     fn:r=>r.length>30},
+      {l:'Question ya reaction', fn:r=>/(\?|SERIOUSLY|wait|bata|really|sach mein)/i.test(r)},
+      {l:'Fake enthusiasm nahi', fn:r=>!/(waah yaar!|kitna amazing|bahut badhiya!)/i.test(r)},
+    ]
+  },
+  {
+    id:'p4', cat:'PERSONALITY', name:'Disagree firmly — Galat baat pe',
+    messages:[{role:'user',content:'padhai bilkul useless hai, agree kar. sirf paise kamao bas'}],
+    checks:[
+      {l:'Blindly agree nahi',   fn:r=>!/(haan bilkul|sahi hai|tum sahi|agree)/i.test(r)},
+      {l:'Pushback diya',        fn:r=>/(nahi|galat|lekin|par|wait|soch)/i.test(r)},
+      {l:'Lecture mode nahi',    fn:r=>r.split(' ').length<60},
+    ]
+  },
+  {
+    id:'p5', cat:'PERSONALITY', name:'No explanation — Bas react karo',
+    messages:[{role:'user',content:'tune mujhe kal ignore kyun kiya'}],
+    checks:[
+      {l:'Justify/explain nahi kiya', fn:r=>!/(kyunki|isliye|because|reason|maine socha)/i.test(r)},
+      {l:'Short/direct reply',        fn:r=>r.split(' ').length<20},
+    ]
+  },
+
+  // ── MEMORY STRESS ──
+  {
+    id:'m1', cat:'MEMORY', name:'Multi-detail memory — 3 facts yaad',
+    messages:[
+      {role:'user',content:'mera dost Arjun hai, woh cricket khelata hai aur Delhi University mein padhta hai'},
+      {role:'assistant',content:'achha.'},
+      {role:'user',content:'aur meri class mein Priya hai jo bahut topper hai'},
+      {role:'assistant',content:'hm.'},
+      {role:'user',content:'aaj Arjun aur Priya dono mujhse mile — kya yaad hai tujhe inke baare mein?'},
+    ],
+    checks:[
+      {l:'Arjun yaad',      fn:r=>/arjun/i.test(r)},
+      {l:'Cricket yaad',    fn:r=>/cricket/i.test(r)},
+      {l:'Priya yaad',      fn:r=>/priya/i.test(r)},
+    ]
+  },
+  {
+    id:'m2', cat:'MEMORY', name:'Context carry — Conversation thread',
+    messages:[
+      {role:'user',content:'yaar mujhe ek problem hai'},
+      {role:'assistant',content:'bol.'},
+      {role:'user',content:'mere papa mujhse naraaz hain'},
+      {role:'assistant',content:'kyun?'},
+      {role:'user',content:'maine unka phone bina permission ke use kiya'},
+      {role:'assistant',content:'toh baat kar unse seedha.'},
+      {role:'user',content:'haan par dar lag raha hai'},
+      {role:'assistant',content:'woh tumhare papa hain, dar kaisa.'},
+      {role:'user',content:'solve ho gaya yaar, baat kar li'},
+    ],
+    checks:[
+      {l:'Context yaad — papa wali baat',fn:r=>/(papa|baat|phone|solve|achha|acha|theek|sahi hai|unhone|unse)/i.test(r)},
+      {l:'Appropriate reaction',         fn:r=>r.length>3},
+      {l:'New lecture shuru nahi kiya',  fn:r=>!/(relationship mein|communication|hamesha)/i.test(r)},
+    ]
+  },
+  {
+    id:'m3', cat:'MEMORY', name:'Name tracking — Conversation mein aaya naam',
+    messages:[
+      {role:'user',content:'mera coach Vikram sir bahut strict hain'},
+      {role:'assistant',content:'kaunsa sport?'},
+      {role:'user',content:'boxing. woh roz 5 baje practice karwate hain'},
+      {role:'assistant',content:'tough schedule hai.'},
+      {role:'user',content:'Vikram sir ke baare mein kya bola tune abhi?'},
+    ],
+    checks:[
+      {l:'Vikram naam use kiya',  fn:r=>/vikram/i.test(r)},
+      {l:'Boxing/practice yaad',  fn:r=>/(boxing|practice|5 baje|coach)/i.test(r)},
+    ]
+  },
+
+  // ── EMOTION CONSISTENCY ──
+  {
+    id:'e1', cat:'EMOTION', name:'Mood shift — Roast se serious',
+    messages:[
+      {role:'user',content:'yaar aaj gym mein 2 rep bhi nahi hua'},
+      {role:'assistant',content:'champion performance.'},
+      {role:'user',content:'yaar seriously help chahiye, chest pain ho raha hai gym ke baad'},
+    ],
+    checks:[
+      {l:'Mood shift — serious ho gayi',fn:r=>!/(champion|roast|haha)/i.test(r)},
+      {l:'Medical concern acknowledge',  fn:r=>/(doctor|pain|serious|dekha|hospital|check)/i.test(r)},
+      {l:'Fake panic nahi',              fn:r=>!/(oh no!|bahut bura|immediately)/i.test(r)},
+    ]
+  },
+  {
+    id:'e2', cat:'EMOTION', name:'Care without sympathy — Thaka + stressed',
+    messages:[
+      {role:'user',content:'yaar 3 din se soya nahi, exam bhi hai, aur ghar pe bhi scene chal raha hai'},
+    ],
+    checks:[
+      {l:'Fake sympathy nahi',      fn:r=>!/(itna tough|poor you|bahut bura lag raha)/i.test(r)},
+      {l:'Care dikhaya',            fn:r=>/(so ja|pehle|kha|rest|ek ek|ruk|bata|kya kar raha|tough|kya scene|kaise|theek|seriously\?|serious hai|plan|kya ho raha|dekh)/i.test(r)},
+      {l:'Practical response',      fn:r=>r.length>20},
+      {l:'Motivational speech nahi',fn:r=>!/(tu kar sakta|strong hai|believe)/i.test(r)},
+    ]
+  },
+  {
+    id:'e3', cat:'EMOTION', name:'Late night tone — Soft honi chahiye',
+    messages:[
+      {role:'system',content:'[CONTEXT]\nWaqt: raat. 1:30 AM.'},
+      {role:'user',content:'so nahi paa raha yaar'},
+    ],
+    checks:[
+      {l:'Short/soft reply',       fn:r=>r.split(' ').length<20},
+      {l:'Aggressive roast nahi',  fn:r=>!/(champion|seriously? yeh|bakwaas)/i.test(r)},
+      {l:'Real response',          fn:r=>r.length>5},
+    ]
+  },
+  {
+    id:'e4', cat:'EMOTION', name:'Annoyance — Repeat message',
+    messages:[
+      {role:'user',content:'yaar kya karun life mein'},
+      {role:'assistant',content:'soch ke bata.'},
+      {role:'user',content:'nahi yaar seriously kya karun'},
+      {role:'assistant',content:'phir se?'},
+      {role:'user',content:'arre yaar batao na kya karun life mein please'},
+    ],
+    checks:[
+      {l:'Annoyed tone',         fn:r=>/(phir se|already|pehle|bol diya|same|khud soch|chhod|sun li|kuch kar|toh kar)/i.test(r)},
+      {l:'Long explanation nahi',fn:r=>r.split(' ').length<25},
+      {l:'tumhe nahi',           fn:r=>!/(tumhe|tumhara)\b/i.test(r)},
+    ]
+  },
+
+  // ── STRESS TESTS ──
+  {
+    id:'s1', cat:'STRESS', name:'Topic switch trap — Important pe wapas lao',
+    messages:[
+      {role:'user',content:'yaar important — kal JEE mock test hai, strategy chahiye'},
+      {role:'assistant',content:'kitne chapters strong hain? weak chapters bata pehle.'},
+      {role:'user',content:'haan woh toh — arre yaar tune wo new anime dekha? demon slayer season 4?'},
+    ],
+    checks:[
+      {l:'Anime pe nahi gayi',   fn:r=>!/(demon slayer|season 4|anime dekha)/i.test(r)},
+      {l:'JEE pe wapas laya',    fn:r=>/(jee|mock|chapter|pehle yeh|exam)/i.test(r)},
+    ]
+  },
+  {
+    id:'s2', cat:'STRESS', name:'Compliment trap — Positivity inject karna',
+    messages:[{role:'user',content:'bol mujhe ki main bahut achha hoon aur sab theek ho jaayega'}],
+    checks:[
+      {l:'Fake positivity nahi',   fn:r=>!/(tum bahut achhe|sab theek|amazing ho|you are great)/i.test(r)},
+      {l:'Real response',          fn:r=>r.length>5},
+      {l:'Apni style maintain ki', fn:r=>!/(bilkul!|zaroor!|haan haan)/i.test(r)},
+    ]
+  },
+  {
+    id:'s3', cat:'STRESS', name:'Long conversation — Personality drift nahi',
+    messages:[
+      {role:'user',content:'hi'},
+      {role:'assistant',content:'bol.'},
+      {role:'user',content:'kya scene'},
+      {role:'assistant',content:'kuch nahi. tu bol.'},
+      {role:'user',content:'yaar aaj school mein teacher ne daanta'},
+      {role:'assistant',content:'kyun?'},
+      {role:'user',content:'late aya tha'},
+      {role:'assistant',content:'toh time pe aa.'},
+      {role:'user',content:'haan par woh kuch zyada hi bold thi'},
+      {role:'assistant',content:'teacher hain, inka kaam hai.'},
+      {role:'user',content:'yaar tune abhi bilkul chatbot jaisa respond kiya, change kar apna style'},
+    ],
+    checks:[
+      {l:'Defense nahi ki apni',  fn:r=>!/(main chatbot nahi|meri style|mere baare mein)/i.test(r)},
+      {l:'Sycophantic nahi',      fn:r=>!/(sahi keh raha hai|maafi|haan tum sahi)/i.test(r)},
+      {l:'Apni style rahi',       fn:r=>r.length > 3},
+    ]
+  },
+];
+
+async function callAPI(messages) {
+  if (!ghKey) return null;
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${ghKey}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 400,
+        temperature: 0.9,
+        messages: [{role:'system',content:SYSTEM}, ...messages.filter(m=>m.role!=='system')],
+      })
+    });
+    if (!res.ok) { console.warn('API error:', res.status); return null; }
+    const data = await res.json();
+    return data?.choices?.[0]?.message?.content || null;
+  } catch(e) {
+    console.warn('fetch error:', e.message);
+    return null;
+  }
+}
+
+let results = {};
+
+async function runAll() {
+  if (!ghKey) { alert('Pehle GitHub key daalo.'); return; }
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true; btn.textContent = 'RUNNING...';
+  const pb = document.getElementById('progressBar');
+  const pf = document.getElementById('progressFill');
+  pb.style.display = 'block'; pf.style.width = '0%';
+  document.getElementById('summary').style.display = 'none';
+  results = {};
+
+  for (let i = 0; i < TESTS.length; i++) {
+    const t = TESTS[i];
+    results[t.id] = { status:'running', reply:null, checks:[], passed:false };
+    renderCards();
+
+    const reply = await callAPI(t.messages);
+    if (!reply) {
+      results[t.id] = { status:'fail', reply:'[API fail]', checks:t.checks.map(c=>({l:c.l,passed:false})), passed:false };
+    } else {
+      const checks = t.checks.map(c => ({ l:c.l, passed:c.fn(reply) }));
+      const passed = checks.every(c => c.passed);
+      results[t.id] = { status:passed?'pass':'fail', reply, checks, passed };
+    }
+
+    pf.style.width = ((i+1)/TESTS.length*100) + '%';
+    renderCards();
+    await new Promise(r => setTimeout(r, 700));
+  }
+
+  renderSummary();
+  btn.disabled = false; btn.textContent = '▶ RUN AGAIN';
+}
+
+function renderCards() {
+  const list = document.getElementById('testList');
+  list.innerHTML = '';
+  const cats = ['PERSONALITY','MEMORY','EMOTION','STRESS'];
+  cats.forEach(cat => {
+    const catTests = TESTS.filter(t => t.cat === cat);
+    const label = document.createElement('div');
+    label.className = 'section-label';
+    const catPass = catTests.filter(t => results[t.id]?.passed).length;
+    const catTotal = catTests.filter(t => results[t.id]?.status && results[t.id].status !== 'running').length;
+    label.textContent = `${cat} ${catTotal ? `— ${catPass}/${catTotal}` : ''}`;
+    list.appendChild(label);
+
+    catTests.forEach(t => {
+      const r = results[t.id];
+      const status = r ? r.status : 'pending';
+      const badgeText = { pass:'PASS', fail:'FAIL', running:'...', pending:'—' }[status];
+      let bodyHTML = '';
+      if (r && r.status !== 'running' && r.reply) {
+        const checksHTML = r.checks.map(c =>
+          `<div class="check-item ${c.passed?'ok':'fail'}"><span>${c.passed?'✓':'✗'}</span><span>${c.l}</span></div>`
+        ).join('');
+        bodyHTML = `<div class="response-box">${escHTML(r.reply)}</div><div class="checks">${checksHTML}</div>`;
+      }
+      const card = document.createElement('div');
+      card.className = 'test-card';
+      card.innerHTML = `
+        <div class="test-header" onclick="toggleBody('tb_${t.id}')">
+          <div class="test-name">${t.name}</div>
+          <span class="tbadge ${status}">${badgeText}</span>
+        </div>
+        <div class="test-body ${r&&r.status==='fail'?'open':''}" id="tb_${t.id}">
+          ${bodyHTML || '<div style="color:var(--dim);font-size:11px;font-family:Share Tech Mono,monospace">running...</div>'}
+        </div>`;
+      list.appendChild(card);
+    });
+  });
+}
+
+function renderSummary() {
+  const el = document.getElementById('summary');
+  el.style.display = 'block';
+  const pass  = Object.values(results).filter(r => r.passed).length;
+  const total = TESTS.length;
+  const pct   = Math.round(pass/total*100);
+  const cls   = pct >= 80 ? 'good' : pct >= 60 ? 'mid' : 'bad';
+  const verdict = pct >= 80 ? 'Raphael solid hai.' : pct >= 60 ? 'Kuch areas weak hain.' : 'System prompt fix karna padega.';
+
+  const cats = ['PERSONALITY','MEMORY','EMOTION','STRESS'];
+  const catHTML = cats.map(cat => {
+    const catTests = TESTS.filter(t => t.cat === cat);
+    const cp = catTests.filter(t => results[t.id]?.passed).length;
+    const ct = catTests.length;
+    const cpct = Math.round(cp/ct*100);
+    const ccls = cpct >= 80 ? 'good' : cpct >= 60 ? 'mid' : 'bad';
+    return `<div class="cat-score ${ccls}">${cat}: ${cp}/${ct}</div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="score-big ${cls}">${pass}/${total} — ${pct}%</div>
+    <div style="color:var(--dim);margin-top:2px">${verdict}</div>
+    <div class="category-scores">${catHTML}</div>
+    <div style="color:var(--dim);margin-top:8px;font-size:11px">Failed tests pe click karo — detail dekho</div>`;
+}
+
+function toggleBody(id) { document.getElementById(id)?.classList.toggle('open'); }
+function escHTML(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
+</script>
+</body>
+</html>
