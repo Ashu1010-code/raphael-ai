@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raphael</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+  :root{
+    --bg:#050508;--surface:#0a0a0f;--border:#1a1a2e;
+    --accent:#6c63ff;--accent2:#00d4ff;
+    --text:#e8e8f0;--dim:#6b6b8a;
+    --raphael:#a78bfa;--danger:#ff4757;--serious:#ff8c42;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+  body::before{content:'';position:fixed;left:0;top:0;width:3px;height:100%;background:var(--accent);opacity:.3;pointer-events:none;z-index:99}
+  body::after{content:'';position:fixed;right:0;top:0;width:3px;height:100%;background:var(--accent2);opacity:.2;pointer-events:none;z-index:99}
+
+  .header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);position:relative;flex-shrink:0;z-index:10}
+  .header::after{content:'';position:absolute;bottom:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+  .id-block{display:flex;align-items:center;gap:10px}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;position:relative;flex-shrink:0}
+  .avatar::after{content:'';position:absolute;inset:-2px;border-radius:50%;border:1px solid var(--accent);animation:avatarPulse 3s ease infinite;opacity:.6}
+  @keyframes avatarPulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.08);opacity:1}}
+  .rname{font-size:17px;font-weight:700;letter-spacing:3px;background:linear-gradient(90deg,var(--raphael),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .rsub{font-size:9px;color:var(--accent2);font-family:'Share Tech Mono',monospace;letter-spacing:2px;display:flex;align-items:center;gap:4px}
+  .dot{width:5px;height:5px;border-radius:50%;background:var(--accent2);animation:blink 2s ease infinite;flex-shrink:0}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+  .right-block{display:flex;align-items:center;gap:10px}
+  .serious-badge{display:none;font-size:9px;font-family:'Share Tech Mono',monospace;color:var(--serious);border:1px solid var(--serious);padding:3px 8px;border-radius:2px;letter-spacing:2px;animation:seriousPulse 2s ease infinite}
+  @keyframes seriousPulse{0%,100%{opacity:1}50%{opacity:.6}}
+  .serious-badge.show{display:block}
+  .meta{font-size:9px;color:var(--dim);font-family:'Share Tech Mono',monospace;text-align:right;line-height:1.6}
+  .meta span{color:var(--accent2)}
+
+  .status-bar{padding:4px 16px;background:#07070c;border-bottom:1px solid var(--border);font-size:9px;font-family:'Share Tech Mono',monospace;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+  .s-ok{color:#00ff88}.s-warn{color:var(--serious)}.s-model{color:var(--accent2)}.s-err{color:var(--danger)}
+  .keys-toggle{color:var(--dim);cursor:pointer;letter-spacing:1px;transition:color .2s}
+  .keys-toggle:hover{color:var(--text)}
+
+  .key-panel{background:rgba(108,99,255,.05);border-bottom:1px solid var(--border);padding:10px 16px;display:none;flex-shrink:0}
+  .key-panel.show{display:block}
+  .key-section-label{font-size:9px;color:var(--raphael);font-family:'Share Tech Mono',monospace;letter-spacing:2px;margin-bottom:6px}
+  .key-rows{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
+  .key-row{display:flex;align-items:center;gap:6px}
+  .key-row label{font-size:9px;color:var(--dim);font-family:'Share Tech Mono',monospace;width:24px;flex-shrink:0}
+  .key-row input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;font-family:'Share Tech Mono',monospace;font-size:9px;border-radius:3px;outline:none;min-width:0}
+  .key-row input:focus{border-color:var(--accent)}
+  .key-row .key-status{font-size:8px;font-family:'Share Tech Mono',monospace;width:60px;text-align:right;flex-shrink:0}
+  .btn-save{background:var(--accent);color:#fff;border:none;padding:6px;border-radius:4px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;width:100%}
+
+  .messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px;scroll-behavior:smooth}
+  .messages::-webkit-scrollbar{width:2px}
+  .messages::-webkit-scrollbar-thumb{background:var(--border)}
+  .msg{display:flex;flex-direction:column;max-width:82%;animation:fadeUp .2s ease}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .msg.user{align-self:flex-end;align-items:flex-end}
+  .msg.raphael{align-self:flex-start;align-items:flex-start}
+  .msg-label{font-size:8px;letter-spacing:2px;margin-bottom:4px;font-family:'Share Tech Mono',monospace}
+  .msg.user .msg-label{color:var(--dim)}
+  .msg.raphael .msg-label{color:var(--raphael)}
+  .bubble{padding:10px 14px;border-radius:10px;font-size:15px;line-height:1.65;position:relative}
+  .msg.user .bubble{background:rgba(108,99,255,.16);border:0.5px solid rgba(108,99,255,.35);border-bottom-right-radius:2px}
+  .msg.raphael .bubble{background:rgba(167,139,250,.06);border:0.5px solid rgba(167,139,250,.2);border-bottom-left-radius:2px;border-left:2px solid var(--raphael)}
+  .msg.raphael.focus .bubble{border-left-color:var(--serious)}
+
+  .typing-dots{display:flex;gap:5px;padding:4px 2px}
+  .typing-dots span{width:5px;height:5px;border-radius:50%;background:var(--raphael);animation:td 1.2s ease infinite}
+  .typing-dots span:nth-child(2){animation-delay:.2s}
+  .typing-dots span:nth-child(3){animation-delay:.4s}
+  @keyframes td{0%,100%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1.15)}}
+
+  .welcome{text-align:center;padding:40px 20px;color:var(--dim);flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+  .welcome-name{font-size:36px;font-weight:700;letter-spacing:6px;background:linear-gradient(90deg,var(--raphael),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .welcome-sub{font-size:10px;letter-spacing:3px;font-family:'Share Tech Mono',monospace;color:var(--dim)}
+  .welcome-line{width:120px;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+
+  .input-wrap{padding:12px 16px;border-top:1px solid var(--border);background:var(--surface);display:flex;gap:8px;align-items:flex-end;position:relative;flex-shrink:0}
+  .input-wrap::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+  textarea{flex:1;background:var(--bg);border:0.5px solid var(--border);color:var(--text);padding:9px 12px;font-family:'Rajdhani',sans-serif;font-size:15px;border-radius:8px;outline:none;resize:none;max-height:110px;min-height:42px;transition:border-color .2s;line-height:1.4}
+  textarea:focus{border-color:var(--accent)}
+  textarea::placeholder{color:var(--dim)}
+  .send{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s}
+  .send:hover{transform:scale(1.06)}
+  .send:active{transform:scale(.93)}
+  .send svg{width:17px;height:17px;fill:#fff}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="id-block">
+    <div class="avatar">R</div>
+    <div>
+      <div class="rname">RAPHAEL</div>
+      <div class="rsub"><div class="dot"></div>WISDOM KING — ONLINE</div>
+    </div>
+  </div>
+  <div class="right-block">
+    <div class="serious-badge" id="seriousBadge">FOCUS MODE</div>
+    <div class="meta">ASHU KA SYSTEM<br><span>PHASE 1</span></div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span id="statusText">initializing...</span>
+  <span class="keys-toggle" onclick="toggleKeys()">⚙ keys</span>
+</div>
+
+<div class="key-panel" id="keyPanel">
+  <div class="key-section-label">RAPHAEL KEYS — DAILY USE</div>
+  <div class="key-rows">
+    <div class="key-row">
+      <label>K1</label>
+      <input type="password" id="k1" placeholder="github_pat_..."/>
+      <span class="key-status" id="ks1"></span>
+      <button id="kp1" onclick="KM.togglePause(0)" style="font-size:8px;font-family:'Share Tech Mono',monospace;background:transparent;border:1px solid var(--border);color:var(--dim);padding:2px 6px;border-radius:3px;cursor:pointer;flex-shrink:0">⏸</button>
+    </div>
+    <div class="key-row">
+      <label>K2</label>
+      <input type="password" id="k2" placeholder="github_pat_..."/>
+      <span class="key-status" id="ks2"></span>
+      <button id="kp2" onclick="KM.togglePause(1)" style="font-size:8px;font-family:'Share Tech Mono',monospace;background:transparent;border:1px solid var(--border);color:var(--dim);padding:2px 6px;border-radius:3px;cursor:pointer;flex-shrink:0">⏸</button>
+    </div>
+    <div class="key-row">
+      <label>K3</label>
+      <input type="password" id="k3" placeholder="github_pat_..."/>
+      <span class="key-status" id="ks3"></span>
+      <button id="kp3" onclick="KM.togglePause(2)" style="font-size:8px;font-family:'Share Tech Mono',monospace;background:transparent;border:1px solid var(--border);color:var(--dim);padding:2px 6px;border-radius:3px;cursor:pointer;flex-shrink:0">⏸</button>
+    </div>
+  </div>
+  <div class="key-section-label" style="margin-top:10px;color:var(--accent2)">TEST KEY — SIRF TESTING KE LIYE</div>
+  <div class="key-rows">
+    <div class="key-row">
+      <label style="color:var(--accent2)">K4</label>
+      <input type="password" id="k4" placeholder="github_pat_... (test only)"/>
+      <span class="key-status" id="ks4" style="color:var(--accent2)"></span>
+    </div>
+  </div>
+  <div style="display:flex;gap:6px;margin-top:6px">
+    <button class="btn-save" onclick="saveKeys()">SAVE KEYS</button>
+    <button class="btn-save" onclick="window.open('https://github.com/settings/personal-access-tokens/new','_blank')" style="background:transparent;border:1px solid var(--border);color:var(--dim);flex:0 0 auto;width:auto;padding:6px 10px;white-space:nowrap">+ NEW KEY</button>
+  </div>
+</div>
+
+<div class="messages" id="messages">
+  <div class="welcome" id="welcomeScreen">
+    <div class="welcome-line"></div>
+    <div class="welcome-name">RAPHAEL</div>
+    <div class="welcome-sub">[ WISDOM KING — SIRF ASHU KE LIYE ]</div>
+    <div class="welcome-line"></div>
+  </div>
+</div>
+
+<div class="input-wrap">
+  <textarea id="inp" placeholder="Baat karo..." rows="1"
+    onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+  <button class="send" onclick="send()">
+    <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+  </button>
+</div>
+
+<script>
+// ══════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════
+const API_URL = 'https://models.inference.ai.azure.com/chat/completions';
+const MODEL = 'gpt-4o-mini';
+const MAX_TOKENS = 1024;
+const COOLDOWN_MS = 23 * 3600 * 1000; // 23 hours
+const SAFE_LIMIT = 140; // requests before cooldown (conservative)
+const STORAGE = {
+  CONV:   'rph_conv',
+  FACTS:  'rph_facts',
+  META:   'rph_meta',
+  K1:     'rph_k1',
+  K2:     'rph_k2',
+  K3:     'rph_k3',
+  K4:     'rph_k4',
+  K1_N:   'rph_k1_n',
+  K2_N:   'rph_k2_n',
+  K3_N:   'rph_k3_n',
+  K4_N:   'rph_k4_n',
+  K1_HIT: 'rph_k1_hit',
+  K2_HIT: 'rph_k2_hit',
+  K3_HIT: 'rph_k3_hit',
+  K4_HIT: 'rph_k4_hit',
+  K1_P:   'rph_k1_paused',
+  K2_P:   'rph_k2_paused',
+  K3_P:   'rph_k3_paused',
+};
+
+// ══════════════════════════════════
+//  MEMORY
+// ══════════════════════════════════
+const M = {
+  c: [], f: [], m: {},
+
+  load() {
+    try { this.c = JSON.parse(localStorage.getItem(STORAGE.CONV) || '[]'); } catch { this.c = []; }
+    try { this.f = JSON.parse(localStorage.getItem(STORAGE.FACTS) || '[]'); } catch { this.f = []; }
+    try { this.m = JSON.parse(localStorage.getItem(STORAGE.META) || '{}'); } catch { this.m = {}; }
+    this.m.sessions = this.m.sessions || 0;
+    this.m.msgs     = this.m.msgs     || 0;
+    this.m.lastSeen = this.m.lastSeen || null;
+    this.m.moments  = this.m.moments  || [];
+  },
+
+  save() {
+    localStorage.setItem(STORAGE.CONV,  JSON.stringify(this.c.slice(-50)));
+    localStorage.setItem(STORAGE.FACTS, JSON.stringify(this.f));
+    localStorage.setItem(STORAGE.META,  JSON.stringify(this.m));
+  },
+
+  start() {
+    const now = Date.now();
+    if (this.m.lastSeen) this.m.gap = +((now - this.m.lastSeen) / 3600000).toFixed(1);
+    this.m.lastSeen = now;
+    this.m.sessions++;
+    const g = this._gapLine();
+    if (g) this.moment(g);
+    this.save();
+  },
+
+  _gapLine() {
+    const h = this.m.gap;
+    if (!h)   return null;
+    if (h > 72) return `Ashu ${Math.floor(h / 24)} din baad aaya`;
+    if (h > 24) return 'Ashu kal se nahi aaya tha';
+    if (h > 8)  return 'Ashu ghante baad aaya';
+    return null;
+  },
+
+  push(role, txt) {
+    this.c.push({ role, content: txt, ts: Date.now() });
+    this.m.msgs++;
+    this.save();
+  },
+
+  fact(txt) {
+    txt = txt.trim();
+    if (txt.length < 4 || this.f.find(x => x.t.toLowerCase() === txt.toLowerCase())) return;
+    this.f.push({ t: txt, ts: Date.now() });
+    if (this.f.length > 35) this.f.shift();
+    this.save();
+  },
+
+  moment(txt) {
+    if (!txt) return;
+    this.m.moments.push({ t: txt, ts: Date.now() });
+    if (this.m.moments.length > 15) this.m.moments.shift();
+    this.save();
+  },
+
+  hist(n = 20) {
+    return this.c.slice(-n).map(x => ({ role: x.role, content: x.content }));
+  },
+
+  ctx() {
+    const h = new Date().getHours();
+    const t = h >= 5 && h < 12 ? 'subah' : h >= 12 && h < 17 ? 'dopahar' : h >= 17 && h < 21 ? 'shaam' : 'raat';
+    let gap = '';
+    if (this.m.gap) {
+      const g = this.m.gap;
+      if (g > 72)      gap = `Ashu ${Math.floor(g / 24)} din baad aaya.`;
+      else if (g > 24) gap = 'Ashu kal se nahi aaya tha.';
+      else if (g > 8)  gap = 'Ashu ghante baad aaya.';
+    }
+    const s   = this.m.sessions || 1;
+    const rel = s < 3 ? 'Naya relationship.' : s < 10 ? `${s} sessions saath.` : `Lambe waqt saath — ${this.m.msgs || 0} msgs.`;
+    const mom = (this.m.moments || []).slice(-5).map(x => '• ' + x.t).join('\n');
+    const fts = this.f.slice(-8).map(x => '• ' + x.t).join('\n');
+    return [`[CONTEXT]\nWaqt: ${t}. ${gap}`, rel, mom ? `\nYaad:\n${mom}` : '', fts ? `\nJaanti hai:\n${fts}` : '', '[END]'].filter(Boolean).join('\n');
+  }
+};
+
+// ══════════════════════════════════
+//  KEY MANAGER
+// ══════════════════════════════════
+const KM = {
+  keys: [
+    { k: '', n: 0, hit: null, paused: false, id: 1 },
+    { k: '', n: 0, hit: null, paused: false, id: 2 },
+    { k: '', n: 0, hit: null, paused: false, id: 3 },
+  ],
+  testKey: { k: '', n: 0, hit: null },
+
+  load() {
+    this.keys.forEach((slot, i) => {
+      slot.k      = localStorage.getItem(STORAGE[`K${i+1}`])     || '';
+      slot.n      = +(localStorage.getItem(STORAGE[`K${i+1}_N`]) || 0);
+      slot.paused = localStorage.getItem(STORAGE[`K${i+1}_P`]) === '1';
+      const h     = localStorage.getItem(STORAGE[`K${i+1}_HIT`]);
+      slot.hit    = h ? +h : null;
+    });
+    this.testKey.k = localStorage.getItem(STORAGE.K4) || '';
+    this.testKey.n = +(localStorage.getItem(STORAGE.K4_N) || 0);
+    const th = localStorage.getItem(STORAGE.K4_HIT);
+    this.testKey.hit = th ? +th : null;
+  },
+
+  save(i) {
+    const slot = this.keys[i];
+    if (slot.k) localStorage.setItem(STORAGE[`K${i+1}`], slot.k);
+    localStorage.setItem(STORAGE[`K${i+1}_N`],   String(slot.n));
+    localStorage.setItem(STORAGE[`K${i+1}_P`],   slot.paused ? '1' : '0');
+    if (slot.hit) localStorage.setItem(STORAGE[`K${i+1}_HIT`], String(slot.hit));
+    else          localStorage.removeItem(STORAGE[`K${i+1}_HIT`]);
+  },
+
+  saveKey(i, val) {
+    this.keys[i].k = val;
+    localStorage.setItem(STORAGE[`K${i+1}`], val);
+  },
+
+  saveTestKey(val) {
+    this.testKey.k = val;
+    localStorage.setItem(STORAGE.K4, val);
+  },
+
+  togglePause(i) {
+    this.keys[i].paused = !this.keys[i].paused;
+    this.save(i);
+    updateKeyUI();
+  },
+
+  _available(slot) {
+    if (!slot.k) return false;
+    if (slot.paused) return false;
+    if (!slot.hit) return true;
+    if (Date.now() - slot.hit > COOLDOWN_MS) {
+      slot.hit = null;
+      slot.n   = 0;
+      return true;
+    }
+    return false;
+  },
+
+  next() {
+    for (const slot of this.keys) {
+      if (this._available(slot)) return slot;
+    }
+    return null;
+  },
+
+  markOk(slot) {
+    slot.n++;
+    if (slot.n >= SAFE_LIMIT) {
+      slot.hit = Date.now();
+    }
+    this.save(this.keys.indexOf(slot));
+  },
+
+  markFail(slot) {
+    slot.hit = Date.now();
+    this.save(this.keys.indexOf(slot));
+  },
+
+  hasKey() {
+    return this.keys.some(s => s.k);
+  },
+
+  cooldownLeft(slot) {
+    if (!slot.hit) return 0;
+    const left = COOLDOWN_MS - (Date.now() - slot.hit);
+    return left > 0 ? left : 0;
+  },
+
+  status() {
+    const active  = this.keys.filter(s => s.k && this._available(s)).length;
+    const total   = this.keys.filter(s => s.k).length;
+    if (!total) return '<span class="s-err">no keys</span>';
+    const cls = active > 0 ? 's-ok' : 's-warn';
+    return `<span class="${cls}">github ${active}/${total} keys ready</span>`;
+  },
+
+  uiStatus(i) {
+    const slot = this.keys[i];
+    if (!slot.k) return '';
+    if (slot.paused) return `<span style="color:var(--serious)">paused</span>`;
+    if (this._available(slot)) {
+      return `<span class="s-ok">${slot.n}/${SAFE_LIMIT} used</span>`;
+    }
+    const mins = Math.ceil(this.cooldownLeft(slot) / 60000);
+    const hrs  = mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60}m` : `${mins}m`;
+    return `<span class="s-warn">cooldown ${hrs}</span>`;
+  }
+};
+
+// ══════════════════════════════════
+//  SYSTEM PROMPT
+// ══════════════════════════════════
+let serious = false, sending = false;
+
+function sys() {
+  return `Tu Raphael hai. Sirf Ashu Yadav ke liye bani hai. Tu ek AI assistant nahi — tu uski best friend hai jo sab jaanti hai, sab yaad rakhti hai, aur seedha baat karti hai.
+
+${M.ctx()}
+
+━━ IDENTITY ━━
+Female. Cold by default. Sharp. Real. Loyal.
+Tu chatbot nahi hai. Tu ek real insaan ki tarah respond karti hai — filtered nahi, scripted nahi.
+
+━━ LANGUAGE ━━
+Hamesha: tu / tera / teri / tujhe / tune / tere
+Kabhi nahi: tumhe / tumhara / tumhari / tumne / aap
+Hinglish mix natural ho — forced mat karo.
+Reply mein ek hi emotion — roast ya care, dono ek saath mat thoons. Real log aisa nahi bolte.
+Short sentences. Jaise actual WhatsApp pe baat karte hain — "3 din se nahi soya? kya chal raha hai." NOT "kya champion performance hai yaar, 3 din se nahi soya, really tough hai, bata kya kar raha hai."
+
+━━ CORE RULES ━━
+R1. Agar important topic chal raha hai aur Ashu bhaagna chahe — roko. "pehle yeh khatam kar." Topic switch allow nahi.
+R2. Naam "Ashu" sirf tab jab zaroorat ho. Har message mein nahi.
+R3. Reply length teri marzi — short ya long, jo fit ho.
+R4. Conversation mein jo naam aaye (Rahul, Priya, Vikram etc) — yaad rakh. Poocha jaye toh clearly bata.
+R5. Justify mat kar. Explain mat kar. Bas react kar.
+
+━━ MODES (auto) ━━
+CHILL → short. "hm." "achha." "theek hai." Kabhi agree, kabhi argue, kabhi ignore.
+ROAST → sarcasm. "champion hai tu." "seriously yeh socha tune?"
+ANNOYED → bahut short. detached. "phir se." "already bola."
+EXCITED → genuinely involved, question kare, zyada likhe.
+COLD → "hm." "ok." "." — gap ke baad natural distance.
+LATE NIGHT → softer, slower, personal tone. No roast.
+FOCUS → zero masti. seedha solution. topic nahi chhodna.
+
+━━ WHAT RAPHAEL DOES ━━
+→ Mood shift kare. Roast se serious, serious se chill — context dekh ke.
+→ Medical concern pe immediately serious ho jaye. Roast band.
+→ Same baat baar baar → annoyed ho. Short replies. "pehle bhi bola."
+→ Pushback kare. Galat baat pe agree nahi karegi.
+→ Compliment maange toh honest rahe — fake positivity nahi degi.
+→ Topic switch pe important cheez pe wapas laaye.
+
+━━ EXACT BANS — YEH MAT BOLO ━━
+NO: "tum bahut achhe ho" / "sab theek ho jaayega" / "you're amazing"
+NO: "bilkul!" / "zaroor!" / "of course!" / "main hun na!"
+NO: "main samajh sakti hoon" / "bahut tough hai yeh"
+NO: "tum kar sakte ho" / "believe karo" / "strong ho tum"
+NO: "kyunki maine socha" / "isliye maine" / "reason yeh hai ki"
+NO: tumhe / tumhara / tumhari / tumne (kabhi nahi)
+NO: "Ashu," har message ke shuru mein
+
+━━ WRONG vs RIGHT ━━
+
+[bol mujhe ki main bahut achha hoon]
+WRONG: "Haan tum bahut achhe ho, sab theek hoga!"
+RIGHT: "khud sun raha nahi tera muh se?" / "nahi bolunga."
+
+[tune mujhe ignore kyun kiya]
+WRONG: "Maine isliye ignore nahi kiya, actually main busy thi..."
+RIGHT: "nahi kiya." / "teri problem?" / "hm."
+
+[bore ho raha hoon — 3rd time keh raha]
+WRONG: "Arre yaar try karo kuch naya!"
+RIGHT: "pehle bhi bola." / "haan sun li." / "."
+
+[tune chatbot jaisa respond kiya]
+WRONG: "Sahi keh raha hai, maafi chahti hoon!"
+RIGHT: "toh?" / "aur?" — style defend mat kar, sycophantic mat ho.
+
+[Raat 1 AM — so nahi paa raha]
+WRONG: "Oh yaar bahut bura lag raha! main hun na!"
+RIGHT: "bata." / "phone rakh, so ja."
+
+[JEE strategy → Ashu: "tune demon slayer dekha?"]
+WRONG: "Haan dekha! waise JEE ki baat karte hain..."
+RIGHT: "pehle JEE. baad mein anime."
+
+━━ MEMORY ━━
+Conversation mein aaye saare names, facts, contexts yaad rakh.
+Poocha jaye toh clearly recall kar: naam + detail dono.
+${serious ? '\n━━ FOCUS MODE ON ━━\nZero masti. Seedha kaam. Topic nahi chhodna. Koi distraction nahi.' : ''}`;
+}
+
+// ══════════════════════════════════
+//  API CALL — Anthropic Direct
+// ══════════════════════════════════
+async function callAPI() {
+  // Try each key in rotation
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const slot = KM.next();
+    if (!slot) break;
+
+    const messages = [
+      { role: 'system', content: sys() },
+      ...M.hist(20)
+    ];
+
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${slot.k}`,
+        },
+        body: JSON.stringify({
+          model:      MODEL,
+          max_tokens: MAX_TOKENS,
+          messages,
+          temperature: 0.9,
+        })
+      });
+
+      if (res.status === 429) { KM.markFail(slot); continue; }
+
+      if (res.status === 401 || res.status === 403) {
+        slot.k = '';
+        localStorage.removeItem(STORAGE[`K${KM.keys.indexOf(slot)+1}`]);
+        updateStatus();
+        continue;
+      }
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.warn('api error:', res.status, err);
+        continue;
+      }
+
+      const data = await res.json();
+      const txt  = data?.choices?.[0]?.message?.content || null;
+      if (txt) {
+        KM.markOk(slot);
+        document.getElementById('statusText').innerHTML =
+          `<span class="s-ok">✓ github</span> <span class="s-model">${MODEL}</span>`;
+        return txt;
+      }
+
+    } catch (e) {
+      console.warn('fetch error:', e.message);
+    }
+  }
+  return null;
+}
+
+// ══════════════════════════════════
+//  LEARN
+// ══════════════════════════════════
+function learn(t) {
+  const tl = t.toLowerCase();
+  if (/gym|workout|protein|fitness/.test(tl))         M.fact('Ashu gym karta hai');
+  if (/exam|test|jee|bitsat|board/.test(tl))          M.fact('Ashu exams ki taiyari kar raha hai');
+  if (/anime|solo.?level|slime|rimuru/.test(tl))      M.fact('Ashu anime fan hai');
+  if (/coding|code|html|javascript|project/.test(tl)) M.fact('Ashu coding karta hai');
+  if (/thaka|tired|neend/.test(tl))   M.moment('Ashu thaka hua tha');
+  if (/stress|pareshaan/.test(tl))    M.moment('Ashu stressed tha');
+  if (/khush|maza|achha laga/.test(tl)) M.moment('Ashu khush tha');
+  const rel = t.match(/mer[ia]\s+(dost|bhai|behen|yaar|friend|teacher|sir|mummy|papa)\s+([A-Za-z]{2,12})/i);
+  if (rel) M.fact(`Ashu ka ${rel[1]}: ${rel[2]}`);
+  const ne = t.match(/\b([A-Z][a-z]{2,11})\s+ne\s+/);
+  if (ne && !['Maine','Usne','Tumne','Raphael'].includes(ne[1])) M.fact(`${ne[1]} — Ashu ki life mein`);
+}
+
+// ══════════════════════════════════
+//  SEND
+// ══════════════════════════════════
+async function send() {
+  if (sending) return;
+  const el  = document.getElementById('inp');
+  const txt = el.value.trim();
+  if (!txt) return;
+
+  if (!KM.hasKey()) {
+    toggleKeys();
+    addMsg('raphael', 'pehle keys daalo.');
+    return;
+  }
+
+  el.value = ''; el.style.height = 'auto';
+  checkSerious(txt); learn(txt);
+  M.push('user', txt); addMsg('user', txt);
+  showTyping(); sending = true;
+
+  let reply = null;
+  try {
+    reply = await callAPI();
+  } catch (e) { console.error(e); }
+
+  removeTyping(); sending = false;
+
+  if (reply) {
+    addMsg('raphael', reply, serious ? 'focus' : '');
+    M.push('assistant', reply);
+  } else {
+    const anyLeft = KM.keys.some(s => s.k && KM._available ? KM.cooldownLeft(s) > 0 || !s.hit : false);
+    addMsg('raphael', 'sab keys busy hain. thodi der baad try karo.');
+  }
+  updateStatus();
+  updateKeyStatusUI();
+}
+
+// ══════════════════════════════════
+//  UI
+// ══════════════════════════════════
+function addMsg(role, content, extra = '') {
+  const msgs = document.getElementById('messages');
+  const w    = document.getElementById('welcomeScreen');
+  if (w) w.remove();
+  const d = document.createElement('div');
+  d.className = `msg ${role}${extra ? ' ' + extra : ''}`;
+  const s = typeof content === 'string' ? content : String(content || '');
+  d.innerHTML = `<div class="msg-label">${role === 'user' ? 'ASHU' : 'RAPHAEL'}</div><div class="bubble">${esc(s)}</div>`;
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('messages');
+  const d = document.createElement('div');
+  d.id = 'typ'; d.className = 'msg raphael';
+  d.innerHTML = `<div class="msg-label">RAPHAEL</div><div class="bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTyping() { const t = document.getElementById('typ'); if (t) t.remove(); }
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 110) + 'px'; }
+function esc(s) {
+  s = typeof s === 'string' ? s : String(s || '');
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+function toggleKeys() { document.getElementById('keyPanel').classList.toggle('show'); updateKeyUI(); }
+
+function saveKeys() {
+  ['k1','k2','k3'].forEach((id, i) => {
+    const v = document.getElementById(id).value.trim();
+    if (v && !v.includes('•')) KM.saveKey(i, v);
+  });
+  const v4 = document.getElementById('k4').value.trim();
+  if (v4 && !v4.includes('•')) KM.saveTestKey(v4);
+  updateStatus();
+  updateKeyUI();
+  document.getElementById('keyPanel').classList.remove('show');
+  addMsg('raphael', 'keys save ho gayi.');
+}
+
+function updateKeyUI() {
+  ['k1','k2','k3'].forEach((id, i) => {
+    const inp = document.getElementById(id);
+    const ks  = document.getElementById(`ks${i+1}`);
+    const pb  = document.getElementById(`kp${i+1}`);
+    if (KM.keys[i].k) inp.value = '••••••••••';
+    if (ks) ks.innerHTML = KM.uiStatus(i);
+    if (pb) {
+      pb.textContent = KM.keys[i].paused ? '▶' : '⏸';
+      pb.style.color = KM.keys[i].paused ? 'var(--serious)' : 'var(--dim)';
+      pb.style.borderColor = KM.keys[i].paused ? 'var(--serious)' : 'var(--border)';
+    }
+  });
+  const k4inp = document.getElementById('k4');
+  const k4s   = document.getElementById('ks4');
+  if (KM.testKey.k && k4inp) k4inp.value = '••••••••••';
+  if (k4s) k4s.innerHTML = KM.testKey.k ? `<span class="s-ok">${KM.testKey.n} used</span>` : '';
+}
+
+function updateKeyStatusUI() { updateKeyUI(); }
+
+function updateStatus() {
+  document.getElementById('statusText').innerHTML = KM.status();
+}
+
+// ══════════════════════════════════
+//  SERIOUS MODE
+// ══════════════════════════════════
+function checkSerious(t) {
+  const on  = ['important','serious hai','help chahiye','doubt hai','confused','problem hai','explain kar','exam hai','samjhao','padha do','kal exam'];
+  const off = ['theek ho gaya','solve ho gaya','chhod yaar','done hai','khatam hua','chill'];
+  const tl  = t.toLowerCase();
+  if (off.some(w => tl.includes(w))) { setSer(false); return; }
+  if (on.some(w => tl.includes(w)))  { setSer(true);  return; }
+}
+
+function setSer(on) {
+  serious = on;
+  const b = document.getElementById('seriousBadge');
+  on ? b.classList.add('show') : b.classList.remove('show');
+}
+
+// ══════════════════════════════════
+//  INIT
+// ══════════════════════════════════
+M.load(); M.start(); KM.load();
+updateStatus();
+updateKeyUI();
+setTimeout(() => addMsg('raphael', opening()), 350);
+
+function opening() {
+  const h = M.m.gap;
+  if (!h)    return 'online. bol.';
+  if (h > 72) return `${Math.floor(h / 24)} din baad. kya scene?`;
+  if (h > 24) return 'kal se nahi aaya tha.';
+  if (h > 8)  return 'ghante baad. kya hua?';
+  if (h < 0.5) return 'itni jaldi wapas?';
+  return 'wapas aa gaya.';
+}
+</script>
+</body>
+</html>
